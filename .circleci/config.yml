@@ -4,23 +4,44 @@ version: 2.1
 
 # Define a job to be invoked later in a workflow.
 # See: https://circleci.com/docs/2.0/configuration-reference/#jobs
+commands:
+  cache_restore:
+    steps:
+      - restore_cache:
+          keys:
+            - go-mod-v4-{{ checksum "go.sum" }}
+  cache_store:
+    steps:
+      - save_cache:
+          key: go-mod-v4-{{ checksum "go.sum" }}
+          paths:
+            - "/go/pkg/mod"
 jobs:
-  say-hello:
-    # Specify the execution environment. You can specify an image from Dockerhub or use one of our Convenience Images from CircleCI's Developer Hub.
-    # See: https://circleci.com/docs/2.0/configuration-reference/#docker-machine-macos-windows-executor
+  test:
     docker:
-      - image: cimg/base:stable
-    # Add steps to the job
-    # See: https://circleci.com/docs/2.0/configuration-reference/#steps
+      - image: cimg/go:1.19
     steps:
       - checkout
-      - run:
-          name: "Say hello"
-          command: "echo Hello, World!"
+      - cache_restore
+      - run: go test -v ./...
+      - cache_store
+  build:
+    docker:
+      - image: cimg/go:1.19
+    steps:
+      - checkout
+      - cache_restore
+      - run: go build ./...
+      - cache_store
 
 # Invoke jobs via workflows
 # See: https://circleci.com/docs/2.0/configuration-reference/#workflows
 workflows:
   say-hello-workflow:
     jobs:
-      - say-hello
+      - test
+      - build:
+          requires:
+            - test
+
+# VS Code Extension Version: 1.4.0
